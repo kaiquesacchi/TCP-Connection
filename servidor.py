@@ -5,32 +5,36 @@ import threading
 
 
 def main():
-	# Definição do ip e porta de conexão ______________________________________
-	if len(sys.argv) != 2:
+	# Definição do IP e porta de conexão ______________________________________
+	server = "localhost"
+	if len(sys.argv) == 1:
+		port = 3000
+
+	elif len(sys.argv) == 2:
+		port = int(sys.argv[1])
+
+	else:
 		print("Uso do programa: python3 servidor.py <porta>")
 		exit(1)
 
-	server = "localhost"
-	port = int(sys.argv[1])
-
 	# Criação do socket _______________________________________________________
-	print("[PRINCIPAL] Iniciando servidor em {}:{}".format(server, port))
+	print("Iniciando servidor em {}:{}".format(server, port))
 	tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	tcp.bind((server, port))
 
 	# Começa a escutar novas conexões. Limitado a 10 simultâneas
-	tcp.listen(10)
+	tcp.listen(3)
 
 	while (True):
-		print("[PRINCIPAL] Aguardando conexão")
-		print("[PRINCIPAL] Threads ativas: " + str(threading.active_count()))
+		print("Aguardando conexão")
+		print("Threads ativas: " + str(threading.active_count()))
 		connection, client_address = tcp.accept()
 		new_client = threading.Thread(
 			group=None, target=client_thread, name=None,
 			args=(connection, client_address), kwargs={}, daemon=None
 		)
 		new_client.start()
-		print("[PRINCIPAL] Thread criada para lidar com requisição")
+		print("Thread criada para lidar com requisição\n\n")
 
 
 def client_thread(connection, client_address):
@@ -57,12 +61,14 @@ def get(connection, data):
 	data = connection.recv(256).decode('utf-8')
 	if len(connection.recv(1)) != 0:
 		connection.send(
-			"ERROR 2 - Nome muito longo (max. 256 caracteres".encode())
+			"ERROR 2 - Nome muito longo (max. 256 caracteres)".encode()
+		)
 		return
 
 	# Checa se arquivo existe
 	if not os.path.isfile(data):
-		return connection.send("ERROR 1 - Arquivo não existe".encode())
+		connection.send("ERROR 1 - Arquivo não existe".encode())
+		return
 
 	# Transmissão do arquivo
 	with open(data, "r") as file:
@@ -80,7 +86,8 @@ def put(connection, data):
 			file.write(data)
 			data = connection.recv(4096).decode('utf-8')
 
-	return "PUT recebido"
+	connection.send("Arquivo recebido")
+	return
 
 
 def text(connection, data):
